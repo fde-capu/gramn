@@ -16,6 +16,7 @@ saplin = os.getenv('SAPLIN_KEY')
 mocked_return = True
 debug_raw_response = False
 debug_raw_post = True
+ignore_alts = []
 
 class TextExtractor(HTMLParser):
   def __init__(self):
@@ -70,6 +71,8 @@ def api_call(data) -> dict:
     print('Error: ', e)
 
 def prepare(content = ''):
+  global ignore_alts
+  ignore_alts = Path('ignore_alts').read_text().splitlines()
   data = {
     'key': saplin,
     'text': content,
