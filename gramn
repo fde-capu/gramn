@@ -6,62 +6,95 @@ import json
 from html.parser import HTMLParser
 import re
 from dotenv import load_dotenv
-import os
-
 load_dotenv()
+import os
+import colorama as cm
+cm.init()
+from colorama import Fore as _f, Back as _b, Style as _s
+
 saplin = os.getenv('SAPLIN_KEY')
+mocked_return = True
+debug_raw_response = False
+debug_raw_post = True
 
 class TextExtractor(HTMLParser):
   def __init__(self):
     super().__init__()
-    self.text = []
-    self.alt_values = []
+    self.text = ''
   def handle_data(self, data):
-    data = ''.join(c for c in data if c.isprintable() or c.isspace())
-    cleaned_data = re.sub(r'\s+', ' ', data).strip()
-    if cleaned_data:
-      self.text.append(cleaned_data)
+    new_data = ''
+    for c in data:
+      if c.isprintable() or c.isspace():
+        new_data += c;
+        next
+    new_data = re.sub('\s+', ' ', new_data)
+    self.text += new_data
+    self.curate()
   def handle_starttag(self, tag, attrs):
+    if tag == 'br':
+      self.text += ' '
     if tag == 'img':
       for attr, value in attrs:
         if attr == 'alt' and value.strip():
-          self.alt_values.append(value.strip())
+          self.text += '' + value.strip() + ' '
+          self.curate()
+  def curate(self):
+    if len(self.text) < 2:
+      return
+    self.text = re.sub('(\s|\|){2,}', ' | ', self.text)
+    self.text = re.sub('^(\s|\|)+', '', self.text)
+    self.text = re.sub('\| arte ', '', self.text)
+    self.text = re.sub('\| ilustração ', '', self.text)
+    self.text = re.sub('\| espaçador ', '', self.text)
+    self.text = re.sub('\| ([a-zà-ü])', '\g<1>', self.text)
 
 def extract_text_and_alt_tags(html_content):
   parser = TextExtractor()
   parser.feed(html_content)
-  text = ' '.join(parser.text)
-  text += ' ||| ' + ' '.join(parser.alt_values)
-  return text
+  return parser.text
 
-def api_call(data):
+def api_call(data) -> dict:
+  if mocked_return:
+    return json.loads(Path('scraps/output.json').read_text())['edits']
   try:
     response = requests.post(
-      "https://api.sapling.ai/api/v1/edits",
+      'https://api.sapling.ai/api/v1/edits',
       json = data
     )
     resp_json = response.json()
     if 200 <= response.status_code < 300:
       return resp_json['edits']
     else:
-      print("Error: ", resp_json)
+      print('Error: ', resp_json)
   except Exception as e:
-    print("Error: ", e)
+    print('Error: ', e)
 
 def prepare(content = ''):
   data = {
-    "key": saplin,
-    "text": content,
-    "session_id": "saplin:gramn"
+    'key': saplin,
+    'text': content,
+    'session_id': 'gramn'
   }
   return data
 
 def report_errors(response):
+  out = []
   for e in response:
-    print(e)
-# Take from here!
+    s = e['sentence']
+    msg = ''
+    msg += _s.DIM + _f.CYAN + e['error_type'] + ' '
+    msg += ' ' * (8 - len(e['error_type']))
+    msg += _f.WHITE + s[:e['start']]
+    msg += _f.RED + s[e['start']:e['end']] + _f.WHITE
+    msg += s[e['end']:]
+    r = e['replacement']
+    if len(r):
+      msg += ' ' + _f.GREEN + r + _f.WHITE
+    msg += _s.RESET_ALL
+    out.append(msg)
+  return out
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   if len(sys.argv) != 2:
     print('Missing file argument.')
     sys.exit(1)
@@ -69,5 +102,11 @@ if __name__ == "__main__":
   raw_content = Path(file).read_text()
   content = extract_text_and_alt_tags(raw_content)
   up = prepare(content)
+  payload = str(up)
   dn = api_call(up)
   errors = report_errors(dn)
+  # outputs:
+  if debug_raw_post: print('> (' + str(len(payload)) + ') ' + payload)
+  if debug_raw_response: print('< ' + dn)
+  for e in errors:
+    print(e)
