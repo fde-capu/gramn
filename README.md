@@ -12,6 +12,10 @@ grammar checker cli for Saplin
  - Create a `.env` file.
  - `./gramn <text_file>`
 
+## Dictionary files:
+
+  - `ignore_alts` ignores alt tag if == file line.
+
 ## Resources and thanks:
 
  - Python 3: [https://www.python.org/](https://www.python.org/)

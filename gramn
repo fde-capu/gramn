@@ -16,12 +16,13 @@ saplin = os.getenv('SAPLIN_KEY')
 mocked_return = True
 debug_raw_response = False
 debug_raw_post = True
-ignore_alts = []
 
 class TextExtractor(HTMLParser):
   def __init__(self):
     super().__init__()
     self.text = ''
+    if Path('ignore_alts').exists():
+      self.ignore_alts = Path('ignore_alts').read_text().splitlines()
   def handle_data(self, data):
     new_data = ''
     for c in data:
@@ -44,9 +45,9 @@ class TextExtractor(HTMLParser):
       return
     self.text = re.sub('(\s|\|){2,}', ' | ', self.text)
     self.text = re.sub('^(\s|\|)+', '', self.text)
-    self.text = re.sub('\| arte ', '', self.text)
-    self.text = re.sub('\| ilustração ', '', self.text)
-    self.text = re.sub('\| espaçador ', '', self.text)
+    for i in self.ignore_alts:
+      reg = f'\| {i}'
+      self.text = re.sub(reg, '', self.text)
     self.text = re.sub('\| ([a-zà-ü])', '\g<1>', self.text)
 
 def extract_text_and_alt_tags(html_content):
@@ -71,8 +72,6 @@ def api_call(data) -> dict:
     print('Error: ', e)
 
 def prepare(content = ''):
-  global ignore_alts
-  ignore_alts = Path('ignore_alts').read_text().splitlines()
   data = {
     'key': saplin,
     'text': content,
