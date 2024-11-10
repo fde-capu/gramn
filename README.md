@@ -14,7 +14,8 @@ grammar checker cli for Saplin
 
 ## Dictionary files:
 
-  - `ignore_alts` ignores alt tag if == file line.
+  - `user_dict` contains ignored error lines.
+  - `ignore_alts` ignores html alt tag if == file line.
 
 ## Resources and thanks:
 

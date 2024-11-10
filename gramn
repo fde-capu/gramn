@@ -17,12 +17,20 @@ mocked_return = True
 debug_raw_response = False
 debug_raw_post = True
 
+def absolute(file):
+  return os.path.join(os.path.dirname(os.path.abspath(__file__)), file)
+
+user_dict = ''
+if Path(absolute('user_dict')).exists():
+  user_dict = Path(absolute('user_dict')).read_text().splitlines()
+
 class TextExtractor(HTMLParser):
   def __init__(self):
     super().__init__()
     self.text = ''
-    if Path('ignore_alts').exists():
-      self.ignore_alts = Path('ignore_alts').read_text().splitlines()
+    self.ignore_alts = []
+    if Path(absolute('ignore_alts')).exists():
+      self.ignore_alts = Path(absolute('ignore_alts')).read_text().splitlines()
   def handle_data(self, data):
     new_data = ''
     for c in data:
@@ -57,7 +65,7 @@ def extract_text_and_alt_tags(html_content):
 
 def api_call(data) -> dict:
   if mocked_return:
-    return json.loads(Path('scraps/output.json').read_text())['edits']
+    return json.loads(Path(absolute('scraps/output.json')).read_text())['edits']
   try:
     response = requests.post(
       'https://api.sapling.ai/api/v1/edits',
@@ -82,12 +90,22 @@ def prepare(content = ''):
 def report_errors(response):
   out = []
   for e in response:
+    good = True
     s = e['sentence']
+    error = s[e['start']:e['end']]
+    for d in user_dict:
+      if error == '+GV':
+        print(d)
+      if d == error:
+        good = False
+        break
+    if not good:
+      continue
     msg = ''
     msg += _s.DIM + _f.CYAN + e['error_type'] + ' '
     msg += ' ' * (8 - len(e['error_type']))
     msg += _f.WHITE + s[:e['start']]
-    msg += _f.RED + s[e['start']:e['end']] + _f.WHITE
+    msg += _f.RED + error + _f.WHITE
     msg += s[e['end']:]
     r = e['replacement']
     if len(r):
