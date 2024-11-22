@@ -13,9 +13,9 @@ cm.init()
 from colorama import Fore as _f, Back as _b, Style as _s
 
 saplin = os.getenv('SAPLIN_KEY')
-mocked_return = True
+mocked_return = False
 debug_raw_response = False
-debug_raw_post = True
+debug_raw_post = False
 
 def absolute(file):
   return os.path.join(os.path.dirname(os.path.abspath(__file__)), file)
