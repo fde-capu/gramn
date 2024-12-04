@@ -124,7 +124,10 @@ if __name__ == '__main__':
   up = prepare(content)
   payload = str(up)
   dn = api_call(up)
-  errors = report_errors(dn)
+  if dn:
+    errors = report_errors(dn)
+  else:
+    errors = ['']
   # outputs:
   if debug_raw_post: print('> (' + str(len(payload)) + ') ' + payload)
   if debug_raw_response: print('< ' + dn)
